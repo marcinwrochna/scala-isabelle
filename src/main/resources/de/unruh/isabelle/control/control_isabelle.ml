@@ -5,7 +5,7 @@ structure Control_Isabelle : sig
   val update_ml_compilation_context : (Context.generic -> Context.generic) -> unit
 
   datatype data = DString of string | DInt of int | DList of data list | DObject of exn
-  
+
   exception E_Function of data -> data
   exception E_Context of Proof.context
   exception E_List of exn list
@@ -24,9 +24,9 @@ structure Control_Isabelle : sig
   exception E_TheoryHeader of Thy_Header.header
   exception E_Position of Position.T
   exception E_ToplevelState of Toplevel.state
-  exception E_Transition of Toplevel.transition  
+  exception E_Transition of Toplevel.transition
   exception E_Keywords of Thy_Header.keywords
-  exception E_Mutex of Mutex.mutex
+  exception E_Mutex of Thread.Mutex.mutex
   exception E_Proofterm of Proofterm.proof
   exception E_Data of data
 
@@ -62,7 +62,7 @@ exception E_Position of Position.T
 exception E_ToplevelState of Toplevel.state
 exception E_Transition of Toplevel.transition
 exception E_Keywords of Thy_Header.keywords
-exception E_Mutex of Mutex.mutex
+exception E_Mutex of Thread.Mutex.mutex
 exception E_Proofterm of Proofterm.proof
 exception E_Data of data
 
@@ -75,11 +75,11 @@ val (inSecret, outSecret) = SECRETS
 (* val outStream = BinIO.openOut outputPipeName *)
 
 (* Any sending of data, and any adding of data to the object store must use this mutex *)
-val mutex = Mutex.mutex ()
+val mutex = Thread.Mutex.mutex ()
 fun withMutex f x = let
-  val _ = Mutex.lock mutex
-  val result = f x handle e => (Mutex.unlock mutex; Exn.reraise e)
-  val _ = Mutex.unlock mutex
+  val _ = Thread.Mutex.lock mutex
+  val result = f x handle e => (Thread.Mutex.unlock mutex; Exn.reraise e)
+  val _ = Thread.Mutex.unlock mutex
 in result end
 
 val objectsMax = Unsynchronized.ref 0
@@ -237,7 +237,7 @@ fun reportException seq = withMutex (fn exn => let
   val _ = BinIO.flushOut outStream
   in () end)
 
-fun withErrorReporting seq f = 
+fun withErrorReporting seq f =
   f () handle e => reportException seq e
 
 val asyncMode = true
@@ -245,13 +245,13 @@ val asyncMode = true
 val asyncGroup = Future.new_group NONE
 val asyncParams = {name = "scala-isabelle", group = SOME asyncGroup, deps = [], pri = 0, interrupts = false}
 
-fun runAsync seq f = 
+fun runAsync seq f =
   if asyncMode then
     (Future.forks asyncParams [(fn () => withErrorReporting seq f)]; ())
   else
     f ()
 
-(* fun runAsyncDep deps seq f = 
+(* fun runAsyncDep deps seq f =
   if asyncMode then
     (Future.forks {name = "scala-isabelle", group = SOME asyncGroup, deps = deps, pri = 0, interrupts = false} [(fn () => withErrorReporting seq f)]; ())
   else
@@ -260,12 +260,12 @@ fun runAsync seq f =
 (* Context for compiling ML code in. Can be mutated when declaring new ML symbols *)
 val ml_compilation_context = Unsynchronized.ref (Context.Theory \<^theory>)
 (* Mutex for updating the context above *)
-val ml_compilation_mutex = Mutex.mutex ()
+val ml_compilation_mutex = Thread.Mutex.mutex ()
 fun update_ml_compilation_context f = let
-  val _ = Mutex.lock ml_compilation_mutex
+  val _ = Thread.Mutex.lock ml_compilation_mutex
   val _ = (ml_compilation_context := f (!ml_compilation_context))
-             handle e => (Mutex.unlock ml_compilation_mutex; Exn.reraise e)
-  val _ = Mutex.unlock ml_compilation_mutex
+             handle e => (Thread.Mutex.unlock ml_compilation_mutex; Exn.reraise e)
+  val _ = Thread.Mutex.unlock ml_compilation_mutex
   in () end
 (* Executes ML code in the namespace of context, and updates that namespace (side effect) *)
 fun executeML_update (ml:string) = let
@@ -288,7 +288,7 @@ fun store seq = withMutex (fn exn => sendReply1 seq (addToObjects exn))
 fun storeMLValue seq ml = runAsync seq (fn () =>
   executeML ("let open Control_Isabelle val result = ("^ml^") in store "^string_of_int seq^" result end"))
 
-fun string_of_exn exn = 
+fun string_of_exn exn =
   Runtime.pretty_exn exn |> Pretty.unformatted_string_of
   handle Size => "<exn description too long>"
 
@@ -304,7 +304,7 @@ fun string_of_data (DInt i) = string_of_int i
   | string_of_data (DObject e) = string_of_exn e
 
 (* Asynchronous *)
-fun applyFunc seq f (x:data) = 
+fun applyFunc seq f (x:data) =
   case Inttab.lookup (!objects) f of (* Must be on main thread otherwise f might be GC'd before we fetch it *)
     NONE => error ("no object " ^ string_of_int f)
   | SOME (E_Function f) => runAsync seq (fn () => sendReplyData seq (f x))
@@ -320,14 +320,14 @@ fun removeObjects seq (DList ids) = runAsync seq (withMutex (fn () => let
 fun handleLine seq = withErrorReporting seq (fn () =>
   case readByte () of
     (* 1b|string - executes ML code xxx, updates the name space *)
-    0w1 => let val ml = readString () in 
+    0w1 => let val ml = readString () in
            runAsync seq (fn () => (executeML_update ml; sendReplyData seq (DList []))) end
 
     (* 4b|string - Compiles string as ML code of type exn, stores result as object #seq *)
   | 0w4 => storeMLValue seq (readString ())
 
     (* 7b|int64|data - Parses f,x as object#, f of type E_Function, computes f x, stores the result, response 'seq ID' *)
-  | 0w7 => let 
+  | 0w7 => let
         val f = readInt64 ()
         val x = readData ()
       in applyFunc seq f x end

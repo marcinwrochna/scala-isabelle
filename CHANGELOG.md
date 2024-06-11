@@ -133,9 +133,9 @@ as well as support for more ML types.
 ### Added
 
 * Support for Windows (now runs on Linux, OS/X, Windows)
-* [`MLValueWrapper`](https://javadoc.io/doc/de.unruh/scala-isabelle_2.13/0.3.0/de/unruh/isabelle/mlvalue/MLValueWrapper.html): 
+* [`MLValueWrapper`](https://javadoc.io/doc/de.unruh/scala-isabelle_2.13/0.3.0/de/unruh/isabelle/mlvalue/MLValueWrapper.html):
   Utility class for adding support for new ML types (with corresponding Scala classes that simply reference them).
-* [`AdHocConverter`](https://javadoc.io/doc/de.unruh/scala-isabelle_2.13/0.3.0/de/unruh/isabelle/mlvalue/AdHocConverter.html): 
+* [`AdHocConverter`](https://javadoc.io/doc/de.unruh/scala-isabelle_2.13/0.3.0/de/unruh/isabelle/mlvalue/AdHocConverter.html):
   Utility class for adding support for new ML types very quickly (like `MLValueWrapper` but with less boilerplate but
   also less customizability).
 * Support for further ML types:
@@ -144,14 +144,14 @@ as well as support for more ML types.
   * `Thy_Header.keywords` (class [`Keywords`](https://javadoc.io/doc/de.unruh/scala-isabelle_2.13/0.3.0/de/unruh/isabelle/pure/Keywords.html))
   * `Toplevel.state` (class [`ToplevelState`](https://javadoc.io/doc/de.unruh/scala-isabelle_2.13/0.3.0/de/unruh/isabelle/pure/ToplevelState.html))
   * `Path.T` (Java's [`Path`](https://docs.oracle.com/javase/8/docs/api/java/nio/file/Path.html) via [`PathConverter`](https://javadoc.io/doc/de.unruh/scala-isabelle_2.13/0.3.0/de/unruh/isabelle/pure/PathConverter$.html))
-  * `Mutex.mutex` (class [`Mutex`](https://javadoc.io/doc/de.unruh/scala-isabelle_2.13/0.3.0/de/unruh/isabelle/pure/Mutex.html))
+  * `Thread.Mutex.mutex` (class [`Mutex`](https://javadoc.io/doc/de.unruh/scala-isabelle_2.13/0.3.0/de/unruh/isabelle/pure/Mutex.html))
   * `Proofterm.proof` (experimental support, class [`Proofterm`](https://javadoc.io/doc/de.unruh/scala-isabelle_2.13/0.3.0/de/unruh/isabelle/pure/Proofterm.html))
 * Support for commands sent from Isabelle to Scala (via `Control_Isabelle.sendToScala`, handled by custom handler
-  [`isabelleCommandHandler`](https://javadoc.io/doc/de.unruh/scala-isabelle_2.13/0.3.0/de/unruh/isabelle/control/Isabelle/SetupGeneral.html#isabelleCommandHandler)).  
-* Support for connecting to an already running Isabelle instance (experimental, no library support for establishin that connection, 
+  [`isabelleCommandHandler`](https://javadoc.io/doc/de.unruh/scala-isabelle_2.13/0.3.0/de/unruh/isabelle/control/Isabelle/SetupGeneral.html#isabelleCommandHandler)).
+* Support for connecting to an already running Isabelle instance (experimental, no library support for establishin that connection,
   see [`SetupRunning`](https://javadoc.io/doc/de.unruh/scala-isabelle_2.13/0.3.0/de/unruh/isabelle/control/Isabelle$$SetupRunning.html)).
-* Class [`Isabelle`](https://javadoc.io/doc/de.unruh/scala-isabelle_2.13/0.3.0/de/unruh/isabelle/control/Isabelle.html) 
-  supports to check/wait for successful initialization (by inheriting from [`FutureValue`](https://javadoc.io/doc/de.unruh/scala-isabelle_2.13/0.3.0/de/unruh/isabelle/misc/FutureValue.html)). 
+* Class [`Isabelle`](https://javadoc.io/doc/de.unruh/scala-isabelle_2.13/0.3.0/de/unruh/isabelle/control/Isabelle.html)
+  supports to check/wait for successful initialization (by inheriting from [`FutureValue`](https://javadoc.io/doc/de.unruh/scala-isabelle_2.13/0.3.0/de/unruh/isabelle/misc/FutureValue.html)).
 * Class [`Isabelle`](https://javadoc.io/doc/de.unruh/scala-isabelle_2.13/0.3.0/de/unruh/isabelle/control/Isabelle.html)
   cleans resources (Isabelle process) after garbage collection
   (calling [`.destroy`](https://javadoc.io/doc/de.unruh/scala-isabelle_2.13/0.3.0/de/unruh/isabelle/control/Isabelle.html#destroy():Unit) is optional).
@@ -162,7 +162,7 @@ as well as support for more ML types.
     to toggle the `build` flag of an Isabelle
     [`Setup`](https://javadoc.io/doc/de.unruh/scala-isabelle_2.13/0.3.0/de/unruh/isabelle/control/Isabelle$$Setup.html).
 * Added methods:
-  * [`Utils.freshName`](https://javadoc.io/static/de.unruh/scala-isabelle_2.13/0.3.0/de/unruh/isabelle/misc/Utils$.html#freshName(name:String):String) for generating fresh (randomized) names. 
+  * [`Utils.freshName`](https://javadoc.io/static/de.unruh/scala-isabelle_2.13/0.3.0/de/unruh/isabelle/misc/Utils$.html#freshName(name:String):String) for generating fresh (randomized) names.
   * [`Theory.mutex`](https://javadoc.io/static/de.unruh/scala-isabelle_2.13/0.3.0/de/unruh/isabelle/pure/Theory$.html#mutex(implicitisabelle:de.unruh.isabelle.control.Isabelle,implicitexecutionContext:scala.concurrent.ExecutionContext):de.unruh.isabelle.pure.Mutex)
     returns a mutex for synchronizing theory operations.
   * [`Thm.theoryOf`](https://javadoc.io/static/de.unruh/scala-isabelle_2.13/0.3.0/de/unruh/isabelle/pure/Thm.html#theoryOf:de.unruh.isabelle.pure.Theory) and
@@ -208,14 +208,14 @@ None
 ## [0.2.0] – 2020-10-01
 
 The biggest changes include completed API documentation as well as improved support
-for loading theory files that are not in the session image. 
+for loading theory files that are not in the session image.
 
 ### Added
 
 * API documentation completed.
 * `BigIntConverter` and `DataConverter`: support for `MLValue[BigInt]`, `MLValue[Isabelle.Data]`
 * `Theory.apply(Path)`: Allows to load Isabelle theories from a file.
-* `Theory.registerSessionDirectories`, `Theory.registerSessionDirectoriesNow`: 
+* `Theory.registerSessionDirectories`, `Theory.registerSessionDirectoriesNow`:
   Register directories containing theory files. Required to find imports of theories.
 * `mlvalue.Version`: Provides information about current Isabelle version.
 * `MLvalue.function0`, `MLValue.compileFunction0`, `MLFunction0`: Support for `MLFunction`s
@@ -246,11 +246,11 @@ for loading theory files that are not in the session image.
 ### Removed
 
 * `MLRetrieveFunction.apply(ID)`, `MLRetrieveFunction.apply(Future(ID))`: Prefer the type-safe variant
-  `MLRetrieveFunction.apply(MLValue[A])`. If the behavior of the removed functions is required, 
+  `MLRetrieveFunction.apply(MLValue[A])`. If the behavior of the removed functions is required,
   use `MLRetrieveFunction.apply(MLValue.unsafeFromId(id))`.
-* `MLValue.compileFunctionRaw`: `MLValue.compileFunction` is type-safe and preferred. 
+* `MLValue.compileFunctionRaw`: `MLValue.compileFunction` is type-safe and preferred.
   For low-level (unsafe) compilation, use `MLValue.compileValueRaw`instead.
-* `Cterm.mlValueTerm`, `Ctyp.mlValueTyp` removed.  
+* `Cterm.mlValueTerm`, `Ctyp.mlValueTyp` removed.
 
 [0.2.0]: https://github.com/dominique-unruh/scala-isabelle/compare/v0.1.0...v0.2.0
 [0.3.0]: https://github.com/dominique-unruh/scala-isabelle/compare/v0.2.0...v0.3.0

@@ -16,7 +16,7 @@ structure Control_Isabelle : sig
   val update_ml_compilation_context : (Context.generic -> Context.generic) -> unit
 
   datatype data = DString of string | DInt of int | DList of data list | DObject of exn
-  
+
   exception E_Function of data -> data
   exception E_Context of Proof.context
   exception E_List of exn list
@@ -37,7 +37,7 @@ structure Control_Isabelle : sig
   exception E_ToplevelState of Toplevel.state
   exception E_Transition of Toplevel.transition
   exception E_Keywords of Thy_Header.keywords
-  exception E_Mutex of Mutex.mutex
+  exception E_Mutex of Thread.Mutex.mutex
   exception E_Proofterm of Proofterm.proof
   exception E_Data of data
 
@@ -74,7 +74,7 @@ exception E_Position of Position.T
 exception E_ToplevelState of Toplevel.state
 exception E_Transition of Toplevel.transition
 exception E_Keywords of Thy_Header.keywords
-exception E_Mutex of Mutex.mutex
+exception E_Mutex of Thread.Mutex.mutex
 exception E_Proofterm of Proofterm.proof
 exception E_Data of data
 
@@ -105,15 +105,15 @@ fun log str = TextIO.output (logFile, str)
 fun logStore seq id =
   let val _ = log ("ML \<open>val obj_" ^ string_of_int id ^ " = seq_" ^ string_of_int seq ^ "\<close>\n\n")
       val _ = TextIO.flushOut logFile
-  in () end      
+  in () end
 
-fun logQuery_executeML seq ml = 
+fun logQuery_executeML seq ml =
   let val _ = log ("ML (* execute ML *) \<open>" ^ ml ^ "\<close>\n")
       val _ = log ("ML \<open>val seq_" ^ string_of_int seq ^ " = Control_Isabelle.DList []\<close>\n\n")
       val _ = TextIO.flushOut logFile
   in () end
 
-fun logQuery_storeMLValue seq ml = 
+fun logQuery_storeMLValue seq ml =
   let val _ = log ("ML (* store value *) \<open>val seq_" ^ string_of_int seq ^ " = let open Control_Isabelle in\n")
       val _ = log ml
       val _ = log "\nend\<close>\n\n"
@@ -122,7 +122,7 @@ fun logQuery_storeMLValue seq ml =
 
 fun log_data (PDInt i) = log ("DInt " ^ string_of_int i)
   | log_data (PDString s) = log ("DString \"" ^ s ^ "\"")
-  | log_data (PDList l) = 
+  | log_data (PDList l) =
       (log "DList ["; log_data_list l; log "]")
   | log_data PDWildcard = log "_"
   | log_data (PDObject id) = log ("DObject obj_" ^ string_of_int id)
@@ -139,14 +139,14 @@ fun data_wildcard (PDInt _) = PDWildcard
          else PDList l2
       end
 
-fun logQuery_applyFunc seq f (x:pre_data) =  
+fun logQuery_applyFunc seq f (x:pre_data) =
   let val _ = log ("ML (* apply function *) \<open>val seq_" ^ string_of_int seq ^ " = let open Control_Isabelle\n  val E_Function f = obj_" ^ string_of_int f ^ "\n  val x = ")
       val _  = log_data x
       val _ = log "\nin f x end\<close>\n\n"
       val _ = TextIO.flushOut logFile
   in () end
 
-fun logQuery_removeObjects seq (DList objs) = 
+fun logQuery_removeObjects seq (DList objs) =
   let val _ = log ("(* Garbage collecting (seq " ^ string_of_int seq ^ "):")
       val _ = List.app (fn DInt i => log (" obj_" ^ string_of_int i)) objs
       val _ = log "\n\n"
@@ -174,11 +174,11 @@ fun logSendReplyData seq data =
 (* val outStream = BinIO.openOut outputPipeName *)
 
 (* Any sending of data, and any adding of data to the object store must use this mutex *)
-val mutex = Mutex.mutex ()
+val mutex = Thread.Mutex.mutex ()
 fun withMutex f x = let
-  val _ = Mutex.lock mutex
-  val result = f x handle e => (Mutex.unlock mutex; Exn.reraise e)
-  val _ = Mutex.unlock mutex
+  val _ = Thread.Mutex.lock mutex
+  val result = f x handle e => (Thread.Mutex.unlock mutex; Exn.reraise e)
+  val _ = Thread.Mutex.unlock mutex
 in result end
 
 val objectsMax = Unsynchronized.ref 0
@@ -308,7 +308,7 @@ fun readData () : pre_data = case readByte () of
 fun predataToData (PDInt i) = DInt i
   | predataToData (PDString s) = DString s
   | predataToData (PDList l) = map predataToData l |> DList
-  | predataToData (PDObject id) = 
+  | predataToData (PDObject id) =
       case Inttab.lookup (!objects) id of
         NONE => error ("no object " ^ string_of_int id)
         | SOME exn => DObject exn
@@ -350,7 +350,7 @@ fun reportException seq = withMutex (fn exn => let
   val _ = BinIO.flushOut outStream
   in () end)
 
-fun withErrorReporting seq f = 
+fun withErrorReporting seq f =
   f () handle e => reportException seq e
 
 val asyncMode = true
@@ -358,13 +358,13 @@ val asyncMode = true
 val asyncGroup = Future.new_group NONE
 val asyncParams = {name = "scala-isabelle", group = SOME asyncGroup, deps = [], pri = 0, interrupts = false}
 
-fun runAsync seq f = 
+fun runAsync seq f =
   if asyncMode then
     (Future.forks asyncParams [(fn () => withErrorReporting seq f)]; ())
   else
     f ()
 
-(* fun runAsyncDep deps seq f = 
+(* fun runAsyncDep deps seq f =
   if asyncMode then
     (Future.forks {name = "scala-isabelle", group = SOME asyncGroup, deps = deps, pri = 0, interrupts = false} [(fn () => withErrorReporting seq f)]; ())
   else
@@ -373,12 +373,12 @@ fun runAsync seq f =
 (* Context for compiling ML code in. Can be mutated when declaring new ML symbols *)
 val ml_compilation_context = Unsynchronized.ref (Context.Theory \<^theory>)
 (* Mutex for updating the context above *)
-val ml_compilation_mutex = Mutex.mutex ()
+val ml_compilation_mutex = Thread.Mutex.mutex ()
 fun update_ml_compilation_context f = let
-  val _ = Mutex.lock ml_compilation_mutex
+  val _ = Thread.Mutex.lock ml_compilation_mutex
   val _ = (ml_compilation_context := f (!ml_compilation_context))
-             handle e => (Mutex.unlock ml_compilation_mutex; Exn.reraise e)
-  val _ = Mutex.unlock ml_compilation_mutex
+             handle e => (Thread.Mutex.unlock ml_compilation_mutex; Exn.reraise e)
+  val _ = Thread.Mutex.unlock ml_compilation_mutex
   in () end
 (* Executes ML code in the namespace of context, and updates that namespace (side effect) *)
 fun executeML_update (ml:string) = let
@@ -395,7 +395,7 @@ fun executeML ml = let
   in () end
 
 (* Takes mutex *)
-fun store seq = withMutex (fn exn => 
+fun store seq = withMutex (fn exn =>
   let val id = addToObjects exn
       val _ = logStore seq id
   in sendReply1 seq id end)
@@ -405,7 +405,7 @@ fun storeMLValue seq ml = runAsync seq (fn () =>
   executeML ("let open Control_Isabelle val result = ("^ml^") in store "^string_of_int seq^" result end"))
 
 (* Asynchronous *)
-fun applyFunc seq f (x:data) = 
+fun applyFunc seq f (x:data) =
   case Inttab.lookup (!objects) f of (* Must be on main thread otherwise f might be GC'd before we fetch it *)
     NONE => error ("no object " ^ string_of_int f)
   | SOME (E_Function f) => runAsync seq (fn () => sendReplyData seq (f x))
@@ -441,7 +441,7 @@ fun handleLine seq = withErrorReporting seq (fn () =>
                val _ = logQuery_removeObjects seq data
            in removeObjects seq data end
 
-  | cmd => (log ("(* ERROR: Unknown command " ^ string_of_int (Word8.toInt cmd) ^")\n\n"); 
+  | cmd => (log ("(* ERROR: Unknown command " ^ string_of_int (Word8.toInt cmd) ^")\n\n");
             error ("Unknown command " ^ string_of_int (Word8.toInt cmd))))
 
 (* fun handleLine seq =
