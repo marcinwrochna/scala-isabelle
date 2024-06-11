@@ -2,6 +2,8 @@ theory Scala_Isabelle_Master_Control_Program
   imports Pure
 begin
 
+declare [[ML_catch_all = true]]
+
 ML_file "control_isabelle.ml"
 
 ML \<open>
